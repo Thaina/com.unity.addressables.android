@@ -1,17 +1,31 @@
-using System;
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+#define RUNTIME_MOBILE
+#endif
+
 using System.ComponentModel;
-using System.IO;
-using System.Collections.Generic;
-using UnityEngine.Android;
+
 using UnityEngine.ResourceManagement;
-using UnityEngine.ResourceManagement.Util;
-using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+
+#if RUNTIME_MOBILE
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+
+using UnityEngine.Android;
+using UnityEngine.ResourceManagement.Util;
 using UnityEngine.ResourceManagement.Exceptions;
+using UnityEngine.ResourceManagement.ResourceLocations;
+#endif
+
+#if UNITY_IOS
+using UnityEngine.iOS;
+#endif
 
 namespace UnityEngine.AddressableAssets.Android
 {
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if RUNTIME_MOBILE
     // this class is required to generate error when trying loading synchronously
     class PlayAssetDeliveryResource
     {
@@ -42,8 +56,8 @@ namespace UnityEngine.AddressableAssets.Android
     [DisplayName("Play Asset Delivery Provider")]
     public class PlayAssetDeliveryAssetBundleProvider : AssetBundleProvider, IUpdateReceiver
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        Dictionary<string, HashSet<ProvideHandle>> m_ProviderInterfaces = new Dictionary<string, HashSet<ProvideHandle>>();
+#if RUNTIME_MOBILE
+        Dictionary<string,HashSet<ProvideHandle>> m_ProviderInterfaces = new Dictionary<string,HashSet<ProvideHandle>>();
         List<string> m_AssetPackQueue = new List<string>();
 
         /// <inheritdoc/>
@@ -54,15 +68,15 @@ namespace UnityEngine.AddressableAssets.Android
 
         void LoadFromAssetPack(ProvideHandle providerInterface)
         {
-            if (!PlayAssetDeliveryRuntimeData.Instance.Initialized)
+            if(!PlayAssetDeliveryRuntimeData.Instance.Initialized)
             {
                 // this can happen only when trying to load first asset using Play Asset Delivery synchronously
-                new PlayAssetDeliveryResource(this, providerInterface);
+                new PlayAssetDeliveryResource(this,providerInterface);
                 return;
             }
 
-            string bundleName = Path.GetFileNameWithoutExtension(providerInterface.Location.InternalId.Replace("\\", "/"));
-            if (!PlayAssetDeliveryRuntimeData.Instance.BundleNameToAssetPack.ContainsKey(bundleName))
+            string bundleName = Path.GetFileNameWithoutExtension(providerInterface.Location.InternalId.Replace("\\","/"));
+            if(!PlayAssetDeliveryRuntimeData.Instance.BundleNameToAssetPack.TryGetValue(bundleName,out var assetPack))
             {
                 // Bundle is either assigned to the generated asset packs, or not assigned to any asset pack
                 base.Provide(providerInterface);
@@ -70,18 +84,18 @@ namespace UnityEngine.AddressableAssets.Android
             }
 
             var assetPackNameToDownloadPath = PlayAssetDeliveryRuntimeData.Instance.AssetPackNameToDownloadPath;
-            var assetPackName = PlayAssetDeliveryRuntimeData.Instance.BundleNameToAssetPack[bundleName].AssetPackName;
+            var assetPackName = assetPack.AssetPackName;
             // Bundle is assigned to install-time AddressablesAssetPack
-            if (assetPackName == CustomAssetPackUtility.kAddressablesAssetPackName)
+            if(assetPackName == CustomAssetPackUtility.kAddressablesAssetPackName)
             {
-                assetPackNameToDownloadPath.Add(CustomAssetPackUtility.kAddressablesAssetPackName, Application.streamingAssetsPath);
+                assetPackNameToDownloadPath.Add(CustomAssetPackUtility.kAddressablesAssetPackName,Application.streamingAssetsPath);
                 base.Provide(providerInterface);
                 return;
             }
             // Bundle is assigned to the previously downloaded asset pack
-            if (assetPackNameToDownloadPath.ContainsKey(assetPackName))
+            if(assetPackNameToDownloadPath.TryGetValue(assetPackName,out string downloadPath))
             {
-                if (Directory.Exists(assetPackNameToDownloadPath[assetPackName]))
+                if(Directory.Exists(downloadPath))
                 {
                     base.Provide(providerInterface);
                     return;
@@ -90,52 +104,55 @@ namespace UnityEngine.AddressableAssets.Android
                 assetPackNameToDownloadPath.Remove(assetPackName);
             }
             // Download the asset pack
-            new PlayAssetDeliveryResource(this, providerInterface);
-            DownloadRemoteAssetPack(providerInterface, assetPackName);
+            new PlayAssetDeliveryResource(this,providerInterface);
+            DownloadRemoteAssetPack(providerInterface,assetPackName);
         }
 
         /// <inheritdoc/>
-        public override void Release(IResourceLocation location, object asset)
+        public override void Release(IResourceLocation location,object asset)
         {
-            base.Release(location, asset);
+            base.Release(location,asset);
             m_ProviderInterfaces.Clear();
         }
 
-        internal override IOperationCacheKey CreateCacheKeyForLocation(ResourceManager rm, IResourceLocation location, Type desiredType)
+        internal override IOperationCacheKey CreateCacheKeyForLocation(ResourceManager rm,IResourceLocation location,Type desiredType)
         {
-            return new IdCacheKey(location.GetType(), location.InternalId);
+            return new IdCacheKey(location.GetType(),location.InternalId);
         }
 
-        void DownloadRemoteAssetPack(ProvideHandle providerInterface, string assetPackName)
+        void DownloadRemoteAssetPack(ProvideHandle providerInterface,string assetPackName)
         {
             // Note that most methods in the AndroidAssetPacks class are either direct wrappers of java APIs in Google's PlayCore plugin,
             // or depend on values that the PlayCore API returns. If the PlayCore plugin is missing, calling these methods will throw an InvalidOperationException exception.
             try
             {
-                if (!m_ProviderInterfaces.ContainsKey(assetPackName))
+                if(!m_ProviderInterfaces.TryGetValue(assetPackName,out var hashSet))
                 {
-                    if (m_AssetPackQueue.Count == 0)
+                    if(m_AssetPackQueue.Count == 0)
                     {
                         Addressables.ResourceManager.AddUpdateReceiver(this);
                     }
-                    m_ProviderInterfaces[assetPackName] = new HashSet<ProvideHandle>();
+
+                    hashSet = new HashSet<ProvideHandle>();
+                    m_ProviderInterfaces[assetPackName] = hashSet;
                     m_AssetPackQueue.Add(assetPackName);
                 }
-                m_ProviderInterfaces[assetPackName].Add(providerInterface);
+
+                hashSet.Add(providerInterface);
             }
-            catch (InvalidOperationException ioe)
+            catch(InvalidOperationException ioe)
             {
                 m_ProviderInterfaces.Remove(assetPackName);
                 var message = $"Cannot retrieve state for asset pack '{assetPackName}'. This might be because PlayCore Plugin is not installed: {ioe.Message}";
                 Debug.LogError(message);
-                providerInterface.Complete<AssetBundleResource>(null, false, new RemoteProviderException(message));
+                providerInterface.Complete<AssetBundleResource>(null,false,new RemoteProviderException(message));
             }
         }
 
         void CheckDownloadStatus(AndroidAssetPackInfo info)
         {
             var message = "";
-            switch (info.status)
+            switch(info.status)
             {
                 case AndroidAssetPackStatus.Failed:
                     message = $"Failed to retrieve the state of asset pack '{info.name}'.";
@@ -150,37 +167,32 @@ namespace UnityEngine.AddressableAssets.Android
                     AndroidAssetPacks.RequestToUseMobileDataAsync(OnRequestToUseMobileDataComplete);
                     break;
                 case AndroidAssetPackStatus.Completed:
+                    if(AndroidAssetPacks.GetAssetPackPath(info.name) is string assetPackPath && !string.IsNullOrEmpty(assetPackPath))
                     {
-                        var assetPackPath = AndroidAssetPacks.GetAssetPackPath(info.name);
-                        if (!string.IsNullOrEmpty(assetPackPath))
+                        // Asset pack was located on device. Proceed with loading the bundle.
+                        PlayAssetDeliveryRuntimeData.Instance.AssetPackNameToDownloadPath.Add(info.name,assetPackPath);
+                        if(m_ProviderInterfaces.Remove(info.name,out var providerInterface))
                         {
-                            // Asset pack was located on device. Proceed with loading the bundle.
-                            PlayAssetDeliveryRuntimeData.Instance.AssetPackNameToDownloadPath.Add(info.name, assetPackPath);
-                            if (m_ProviderInterfaces.ContainsKey(info.name))
-                            {
-                                foreach (var pi in m_ProviderInterfaces[info.name])
-                                {
-                                    base.Provide(pi);
-                                }
-                                m_ProviderInterfaces.Remove(info.name);
-                            }
+                            foreach(var pi in providerInterface)
+                                base.Provide(pi);
+
                         }
-                        else
-                        {
-                            message = $"Downloaded asset pack '{info.name}' but cannot locate it on device.";
-                        }
-                        break;
                     }
+                    else
+                    {
+                        message = $"Downloaded asset pack '{info.name}' but cannot locate it on device.";
+                    }
+                    break;
             }
 
-            if (!string.IsNullOrEmpty(message))
+            if(!string.IsNullOrEmpty(message))
             {
                 Debug.LogError(message);
-                foreach (var pi in m_ProviderInterfaces[info.name])
+                if(m_ProviderInterfaces.Remove(info.name,out var providerInterface))
                 {
-                    pi.Complete<AssetBundleResource>(null, false, new RemoteProviderException(message));
+                    foreach(var pi in providerInterface)
+                        pi.Complete<AssetBundleResource>(null,false,new RemoteProviderException(message));
                 }
-                m_ProviderInterfaces.Remove(info.name);
             }
         }
 
@@ -190,7 +202,43 @@ namespace UnityEngine.AddressableAssets.Android
             if (m_AssetPackQueue.Count == 0) {
                 return;
             }
+
+#if UNITY_IOS
+            var handles = m_AssetPackQueue.SelectMany(assetPack => {
+                return m_ProviderInterfaces.TryGetValue(assetPack,out var handleSet) ? handleSet.Select(handle => (assetPack, handle)) : Enumerable.Empty<(string assetPack, ProvideHandle handle)>();
+            }).Where(pair => !string.IsNullOrEmpty(pair.handle.Location?.PrimaryKey)).ToList();
+
+            if(handles.Count == 0)
+            {
+                m_AssetPackQueue.Clear();
+                Addressables.ResourceManager.RemoveUpdateReciever(this);
+                return;
+            }
+
+            var tags = handles.Select(pair => pair.handle.Location.PrimaryKey).Distinct().ToArray();
+            OnDemandResources.PreloadAsync(tags).completed += (asyncOp) => {
+                var request = asyncOp as OnDemandResourcesRequest;
+                if(!string.IsNullOrEmpty(request?.error))
+                {
+                    var message = $"On-Demand Resource request for tags '{string.Join(", ",tags)}' failed with error: {request.error}";
+                    Debug.LogError(message);
+                    foreach(var (_, handle) in handles)
+                        handle.Complete<AssetBundleResource>(null,false,new RemoteProviderException(message));
+                }
+                else
+                {
+                    // ODR request succeeded. Provide the bundles.
+                    foreach(var (_, handle) in handles)
+                        base.Provide(handle);
+                }
+
+                // Clean up provider interfaces for all involved asset packs.
+                foreach(var assetPack in handles.Select(handle => handle.assetPack).Distinct())
+                    m_ProviderInterfaces.Remove(assetPack);
+            };
+#else
             AndroidAssetPacks.DownloadAssetPackAsync(m_AssetPackQueue.ToArray(), CheckDownloadStatus);
+#endif
             m_AssetPackQueue.Clear();
             Addressables.ResourceManager.RemoveUpdateReciever(this);
         }
@@ -214,17 +262,8 @@ namespace UnityEngine.AddressableAssets.Android
 
         internal void CompleteInterface(ProvideHandle handle)
         {
-            foreach (var p in m_ProviderInterfaces)
-            {
-                if (p.Value.Remove(handle))
-                {
-                    if (p.Value.Count == 0)
-                    {
-                        m_ProviderInterfaces.Remove(p.Key);
-                    }
-                    return;
-                }
-            }
+            foreach(var pair in m_ProviderInterfaces.Where((pair) => pair.Value.Remove(handle) && pair.Value.Count < 1).ToArray())
+                m_ProviderInterfaces.Remove(pair.Key);
         }
 #else
         /// <inheritdoc/>

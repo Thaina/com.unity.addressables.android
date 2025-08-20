@@ -13,7 +13,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.TestTools;
 
-[RequirePlatformSupport(BuildTarget.Android)]
+[RequirePlatformSupport(BuildTarget.Android,BuildTarget.iOS)]
 internal class PlayAssetDeliveryAndroidBuildTests : PlayAssetDeliveryAndroidBuildTestsBase
 {
     [Test]

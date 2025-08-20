@@ -1,13 +1,23 @@
 {
     "name": "Unity.Addressables.Android.Editor",
+    "rootNamespace": "",
     "references": [
         "Unity.Addressables",
         "Unity.Addressables.Editor",
         "Unity.Addressables.Android",
-        "Unity.ResourceManager"
+        "Unity.ResourceManager",
+        "Unity.ScriptableBuildPipeline",
+        "Unity.ScriptableBuildPipeline.Editor"
     ],
     "includePlatforms": [
         "Editor"
     ],
-    "excludePlatforms": []
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

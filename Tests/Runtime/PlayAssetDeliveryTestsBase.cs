@@ -21,7 +21,7 @@ internal abstract class PlayAssetDeliveryTestsBase
 
     protected string TextureName(int index) => $"testTexture{index}.png";
 
-#if UNITY_EDITOR || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
     protected abstract Tuple<string, string> GroupName(int index);
     protected abstract string CustomAssetPackName(int index);
     protected abstract DeliveryType GenerateDeliveryType(int index);
@@ -112,7 +112,7 @@ internal abstract class PlayAssetDeliveryTestsBase
         Assert.IsTrue(File.Exists(buildFilePath), $"{buildFilePath} doesn't exist");
         var buildFile = File.ReadAllText(buildFilePath);
         Assert.IsTrue(buildFile.IndexOf($"packName = \"{androidPackName}\"") >= 0);
-#if UNITY_ANDROID
+#if UNITY_ANDROID || UNITY_IOS
         var deliveryTypeString = CustomAssetPackUtility.DeliveryTypeToGradleString(type);
         Assert.IsTrue(buildFile.IndexOf($"deliveryType = \"{deliveryTypeString}\"") >= 0);
 #else

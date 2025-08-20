@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEditor.TestTools;
 using UnityEngine.AddressableAssets.Android;
 
-[RequirePlatformSupport(BuildTarget.Android)]
+[RequirePlatformSupport(BuildTarget.Android,BuildTarget.iOS)]
 internal class PlayAssetDeliveryNoPADGroupsBuildTests : PlayAssetDeliveryAndroidBuildTestsBase
 {
     protected override int NumberOfGroups => 0;

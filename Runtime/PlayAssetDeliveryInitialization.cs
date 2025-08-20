@@ -1,4 +1,4 @@
-#if UNITY_EDITOR || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
 using System;
 using System.IO;
 using UnityEngine.Networking;
@@ -83,7 +83,7 @@ namespace UnityEngine.AddressableAssets.Android
 
         protected override void Execute()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
             DownloadCustomAssetPacksData();
 #else
             CompleteOverride(null);

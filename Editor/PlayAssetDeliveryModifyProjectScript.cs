@@ -1,4 +1,4 @@
-#if UNITY_ANDROID
+#if UNITY_ANDROID || UNITY_IOS
 using System;
 using System.IO;
 using System.Text;

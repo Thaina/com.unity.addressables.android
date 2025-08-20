@@ -18,7 +18,7 @@ internal abstract class PlayAssetDeliveryBuildTestsBase : PlayAssetDeliveryTests
     protected const string kRemoteGroupName = "RemoteGroup";
 #endif
 
-#if UNITY_EDITOR || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
     protected override Tuple<string, string> GroupName(int index)
     {
         switch (index)

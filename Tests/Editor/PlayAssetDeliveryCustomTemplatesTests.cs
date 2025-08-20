@@ -1,4 +1,4 @@
-#if UNITY_ANDROID
+#if UNITY_ANDROID || UNITY_IOS
 using NUnit.Framework;
 using System.IO;
 using UnityEditor;
@@ -9,7 +9,7 @@ using UnityEditor.AddressableAssets.Android;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-[RequirePlatformSupport(BuildTarget.Android)]
+[RequirePlatformSupport(BuildTarget.Android,BuildTarget.iOS)]
 internal class PlayAssetDeliveryCustomTemplatesTests : PlayAssetDeliveryAndroidBuildTestsBase
 {
     static string InternalTemplateDirectory => Path.Combine(BuildPipeline.GetPlaybackEngineDirectory(BuildTarget.Android, BuildOptions.None), "Tools", "GradleTemplates");

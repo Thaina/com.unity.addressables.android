@@ -12,6 +12,7 @@ using UnityEngine.ResourceManagement.Util;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.Android;
+using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace UnityEditor.AddressableAssets.Android
 {
@@ -62,7 +63,7 @@ namespace UnityEditor.AddressableAssets.Android
             {
                 if (combined.FileRegistry == null)
                 {
-                    combined.FileRegistry = combined.FileRegistry;
+                    combined.FileRegistry = result.FileRegistry;
                 }
                 else
                 {
@@ -115,11 +116,17 @@ namespace UnityEditor.AddressableAssets.Android
                         m_LoadPathRestore[group] = schema.LoadPath.Id;
                         schema.LoadPath.SetVariableByName(group.Settings, localLoadPath);
                     }
+
+#if UNITY_IOS
+                    var bundleProviderType = typeof(ODRBundleProvider);
+#else
+                    var bundleProviderType = typeof(PlayAssetDeliveryAssetBundleProvider);
+#endif
                     // force PlayAssetDeliveryAssetBundleProvider as AssetBundleProviderType
-                    if (schema.AssetBundleProviderType.Value != typeof(PlayAssetDeliveryAssetBundleProvider))
+                    if (schema.AssetBundleProviderType.Value != bundleProviderType)
                     {
                         m_AssetBundleProviderRestore[group] = schema.AssetBundleProviderType.Value;
-                        schema.AssetBundleProviderType = new SerializedType() { Value = typeof(PlayAssetDeliveryAssetBundleProvider) };
+                        schema.AssetBundleProviderType = new SerializedType() { Value = bundleProviderType };
                     }
                 }
             }
@@ -186,10 +193,13 @@ namespace UnityEditor.AddressableAssets.Android
         /// <returns>The build data result</returns>
         protected override TResult BuildDataImplementation<TResult>(AddressablesDataBuilderInput builderInput)
         {
+#if UNITY_IOS
+            BuildScriptPackedModeODR.CleanBundleInfoODR();
+#endif
             ClearPlayAssetDeliveryContent();
 
             // Don't prepare content for Play Asset Delivery if the build target isn't set to Android
-            if (builderInput.Target != BuildTarget.Android)
+            if (builderInput.Target != BuildTarget.Android && builderInput.Target != BuildTarget.iOS)
             {
                 Addressables.LogWarning("Build target is not set to Android. No custom asset packs will be created.");
                 return base.BuildDataImplementation<TResult>(builderInput);
@@ -232,6 +242,10 @@ namespace UnityEditor.AddressableAssets.Android
             }
             RestoreGroups(builderInput.AddressableSettings);
 
+#if UNITY_IOS
+            BuildScriptPackedModeODR.PreserveODRSettings(builderInput.Registry);
+#endif
+
             if (!TextureCompressionTargetingHelper.UseAssetPacks)
             {
                 Addressables.LogWarning("Addressable content built, but Play Asset Delivery will be used only when building App Bundle with Split Application Binary option checked (or when using Texture Compression Targeting).");
@@ -251,13 +265,8 @@ namespace UnityEditor.AddressableAssets.Android
         {
             // Build AssetBundles
             TResult result = base.DoBuild<TResult>(builderInput, aaContext);
-            if (builderInput.Target != BuildTarget.Android || PlayAssetDeliverySetup.PlayAssetDeliveryNotInitialized())
-            {
-                return result;
-            }
-
-            // Create custom asset packs
-            CreateAssetPacks(aaContext.Settings);
+            if (builderInput.Target is BuildTarget.Android or BuildTarget.iOS && !PlayAssetDeliverySetup.PlayAssetDeliveryNotInitialized())
+                CreateAssetPacks(aaContext.Settings);
             return result;
         }
 
@@ -534,6 +543,10 @@ namespace UnityEditor.AddressableAssets.Android
                     assetsFolderPath = Path.Combine(assetPackName, CustomAssetPackUtility.CustomAssetPacksAssetsPath, relativePath);
                     bundleIdToEditorDataEntryDefault.Add(entry.BundleFileId, new BuildProcessorDataEntry(bundleBuildPath, assetsFolderPath));
                 }
+
+#if UNITY_IOS
+                BuildScriptPackedModeODR.AddBundleODR(bundleFileName,bundleBuildPath,group.Name,deliveryType,(int)DateTimeOffset.Now.TimeOfDay.Ticks);
+#endif
             }
         }
 

@@ -19,6 +19,10 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.AddressableAssets.Android;
 #endif
 
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+#define RUNTIME_MOBILE
+#endif
+
 class PlayAssetDeliveryRuntimeTest : PlayAssetDeliveryBuildTestsBase, IPrebuildSetup, IPostBuildCleanup
 {
     const string kNonAddressableTexture = "NonAddressableTexture";
@@ -27,7 +31,7 @@ class PlayAssetDeliveryRuntimeTest : PlayAssetDeliveryBuildTestsBase, IPrebuildS
     const string kStartLoadMessage = "Start sync loading";
     const string kStopLoadMessage = "Stop sync loading";
 
-#if UNITY_ANDROID
+#if UNITY_ANDROID || UNITY_IOS
 #if UNITY_EDITOR
     // running test in Editor playmode, default texture compression is expected
     const string kExpectedTextureFormat = "ETC2";
@@ -103,6 +107,7 @@ class PlayAssetDeliveryRuntimeTest : PlayAssetDeliveryBuildTestsBase, IPrebuildS
 
     [UnityTest]
     [UnityPlatform(
+        RuntimePlatform.IPhonePlayer,
         RuntimePlatform.Android,
         RuntimePlatform.WindowsPlayer,
         RuntimePlatform.OSXPlayer,
@@ -112,7 +117,7 @@ class PlayAssetDeliveryRuntimeTest : PlayAssetDeliveryBuildTestsBase, IPrebuildS
     )]
     public IEnumerator TexturesCanBeLoaded()
     {
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if RUNTIME_MOBILE
         // checking asset pack states only when running on the Android device
         var assetPackNames = new string[TotalNumberOfGroups];
         for (int i = 0; i < TotalNumberOfGroups; ++i)
@@ -132,7 +137,7 @@ class PlayAssetDeliveryRuntimeTest : PlayAssetDeliveryBuildTestsBase, IPrebuildS
         }
 #endif
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if RUNTIME_MOBILE
         // checking for sync loading on Android while no asset packs are downloaded
         // there are multiple error messages and exceptions generated inside the main Addressables package if asset can't be loaded, but we're checking Addressables for Android specific messages only
         LogAssert.ignoreFailingMessages = true;
@@ -193,7 +198,7 @@ class PlayAssetDeliveryRuntimeTest : PlayAssetDeliveryBuildTestsBase, IPrebuildS
             Addressables.Release(opHandle);
         }
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if RUNTIME_MOBILE
         opGetAssetPackInfo = AndroidAssetPacks.GetAssetPackStateAsync(assetPackNames);
         while (!opGetAssetPackInfo.isDone)
         {
@@ -235,7 +240,7 @@ class PlayAssetDeliveryRuntimeTest : PlayAssetDeliveryBuildTestsBase, IPrebuildS
             Addressables.Release(opHandle);
         }
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if RUNTIME_MOBILE
         // try to remove downloaded asset packs from the device and load textures again (Android only)
         for (int i = 0; i < TotalNumberOfGroups; ++i)
         {

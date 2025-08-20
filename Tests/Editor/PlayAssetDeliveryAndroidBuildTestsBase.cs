@@ -11,14 +11,19 @@ using UnityEditor.AddressableAssets.Android;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-[RequirePlatformSupport(BuildTarget.Android)]
+[RequirePlatformSupport(BuildTarget.Android,BuildTarget.iOS)]
 internal class PlayAssetDeliveryAndroidBuildTestsBase : PlayAssetDeliveryBuildTestsBase
 {
     [OneTimeSetUp]
     public void InitAndroidBuild()
     {
+#if UNITY_IOS
+        EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.iOS, BuildTarget.iOS);
+        PlayerSettings.SetIl2CppCodeGeneration(UnityEditor.Build.NamedBuildTarget.iOS, UnityEditor.Build.Il2CppCodeGeneration.OptimizeSize);
+#else
         EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
         PlayerSettings.SetIl2CppCodeGeneration(UnityEditor.Build.NamedBuildTarget.Android, UnityEditor.Build.Il2CppCodeGeneration.OptimizeSize);
+#endif
     }
 
     protected BuildPlayerOptions CreateSceneAndBuildPlayerOptions()

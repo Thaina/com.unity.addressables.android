@@ -9,7 +9,7 @@ using UnityEngine.AddressableAssets.Android;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-[RequirePlatformSupport(BuildTarget.Android)]
+[RequirePlatformSupport(BuildTarget.Android,BuildTarget.iOS)]
 internal class CustomAssetPackSettingsTests
 {
     const string kAssetPackName = "CustomAssetPack";

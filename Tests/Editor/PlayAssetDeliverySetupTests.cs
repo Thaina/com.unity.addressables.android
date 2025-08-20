@@ -10,7 +10,7 @@ using UnityEngine.AddressableAssets.Android;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-[RequirePlatformSupport(BuildTarget.Android)]
+[RequirePlatformSupport(BuildTarget.Android,BuildTarget.iOS)]
 internal class PlayAssetDeliverySetupTests
 {
     [Test]

@@ -9,13 +9,13 @@ using UnityEngine.AddressableAssets.Android;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-[RequirePlatformSupport(BuildTarget.Android)]
+[RequirePlatformSupport(BuildTarget.Android,BuildTarget.iOS)]
 internal class PlayAssetDeliveryAssetPackNamesTests : PlayAssetDeliveryTestsBase
 {
     protected override int NumberOfGroups => 7;
     protected override int NumberOfUnitedGroups => 3;
 
-#if UNITY_EDITOR || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
     protected override Tuple<string, string> GroupName(int index)
     {
         switch (index)
@@ -74,7 +74,11 @@ internal class PlayAssetDeliveryAssetPackNamesTests : PlayAssetDeliveryTestsBase
     [Test]
     public void EnsureGroupNamesAreCorrect()
     {
+#if UNITY_IOS
+        EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.iOS, BuildTarget.iOS);
+#else
         EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+#endif
         EditorUserBuildSettings.buildAppBundle = true;
         PlayerSettings.Android.splitApplicationBinary = true;
         PlayerSettings.Android.textureCompressionFormats = new[] { TextureCompressionFormat.ETC2 };

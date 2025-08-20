@@ -1,4 +1,4 @@
-#if UNITY_EDITOR || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
 using System.Collections.Generic;
 using System.IO;
 #if UNITY_EDITOR && UNITY_ANDROID
@@ -66,16 +66,26 @@ namespace UnityEngine.AddressableAssets.Android
         };
 
 #if UNITY_EDITOR && UNITY_ANDROID
-        static readonly Dictionary<DeliveryType, AndroidAssetPackDeliveryType> k_DeliveryTypeToGradleString = new Dictionary<DeliveryType, AndroidAssetPackDeliveryType>()
-        {
-            { DeliveryType.InstallTime, AndroidAssetPackDeliveryType.InstallTime },
-            { DeliveryType.FastFollow, AndroidAssetPackDeliveryType.FastFollow },
-            { DeliveryType.OnDemand, AndroidAssetPackDeliveryType.OnDemand },
-        };
-
         internal static string DeliveryTypeToGradleString(DeliveryType deliveryType)
         {
-            return k_DeliveryTypeToGradleString[deliveryType].Name;
+            return (deliveryType switch {
+                DeliveryType.InstallTime => AndroidAssetPackDeliveryType.InstallTime,
+                DeliveryType.FastFollow => AndroidAssetPackDeliveryType.FastFollow,
+                DeliveryType.OnDemand => AndroidAssetPackDeliveryType.OnDemand,
+                _ => AndroidAssetPackDeliveryType.None,
+            }).Name;
+        }
+#endif
+
+#if UNITY_EDITOR && UNITY_IOS
+        internal static string DeliveryTypeToGradleString(DeliveryType deliveryType)
+        {
+            return deliveryType switch {
+                DeliveryType.InstallTime => "ON_DEMAND_RESOURCES_INITIAL_INSTALL_TAGS",
+                DeliveryType.FastFollow => "ON_DEMAND_RESOURCES_PREFETCH_ORDER",
+                DeliveryType.OnDemand => "ON_DEMAND_RESOURCES",
+                _ => "",
+            };
         }
 #endif
     }
